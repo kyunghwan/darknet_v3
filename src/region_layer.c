@@ -28,7 +28,7 @@ region_layer make_region_layer(int batch, int w, int h, int n, int classes, int 
     l.outputs = h*w*n*(classes + coords + 1);
     l.inputs = l.outputs;
 	l.max_boxes = max_boxes;
-    l.truths = max_boxes*(5);
+    l.truths = max_boxes*(7);
     l.delta = calloc(batch*l.outputs, sizeof(float));
     l.output = calloc(batch*l.outputs, sizeof(float));
     int i;
@@ -86,6 +86,8 @@ box get_region_box(float *x, float *biases, int n, int index, int i, int j, int 
         b.w = exp(x[index + 2]) * biases[2*n]   / w;
         b.h = exp(x[index + 3]) * biases[2*n+1] / h;
     }
+    b.a1 = (x[index + 4]);
+    b.a2 = (x[index + 5]);
     return b;
 }
 
@@ -98,6 +100,8 @@ float delta_region_box(box truth, float *x, float *biases, int n, int index, int
     float ty = (truth.y*h - j);
     float tw = log(truth.w / biases[2*n]);
     float th = log(truth.h / biases[2*n + 1]);
+    float ta1 = truth.a1;
+    float ta2 = truth.a2;
     if(DOABS){
         tw = log(truth.w*w / biases[2*n]);
         th = log(truth.h*h / biases[2*n + 1]);
@@ -107,6 +111,8 @@ float delta_region_box(box truth, float *x, float *biases, int n, int index, int
     delta[index + 1] = scale * (ty - logistic_activate(x[index + 1])) * logistic_gradient(logistic_activate(x[index + 1]));
     delta[index + 2] = scale * (tw - x[index + 2]);
     delta[index + 3] = scale * (th - x[index + 3]);
+    delta[index + 4] = scale * (ta1 - x[index + 4]);
+    delta[index + 5] = scale * (ta2 - x[index + 5]);
     return iou;
 }
 
@@ -187,7 +193,7 @@ void forward_region_layer(const region_layer l, network_state state)
     for (b = 0; b < l.batch; ++b){
         for(i = 0; i < l.h*l.w*l.n; ++i){
             int index = size*i + b*l.outputs;
-            l.output[index + 4] = logistic_activate(l.output[index + 4]);
+            l.output[index + 6] = logistic_activate(l.output[index + 6]);
         }
     }
 
@@ -197,14 +203,14 @@ void forward_region_layer(const region_layer l, network_state state)
         for (b = 0; b < l.batch; ++b){
             for(i = 0; i < l.h*l.w*l.n; ++i){
                 int index = size*i + b*l.outputs;
-                softmax_tree(l.output + index + 5, 1, 0, 1, l.softmax_tree, l.output + index + 5);
+                softmax_tree(l.output + index + 7, 1, 0, 1, l.softmax_tree, l.output + index + 7);
             }
         }
     } else if (l.softmax){
         for (b = 0; b < l.batch; ++b){
             for(i = 0; i < l.h*l.w*l.n; ++i){
                 int index = size*i + b*l.outputs;
-                softmax(l.output + index + 5, l.classes, 1, l.output + index + 5, 1);
+                softmax(l.output + index + 7, l.classes, 1, l.output + index + 7, 1);
             }
         }
     }
@@ -220,17 +226,18 @@ void forward_region_layer(const region_layer l, network_state state)
     int class_count = 0;
     *(l.cost) = 0;
     for (b = 0; b < l.batch; ++b) {
+        box truth_val = float_to_box(state.truth + 0*7 + b*l.truths);
         if(l.softmax_tree){
             int onlyclass_id = 0;
             for(t = 0; t < l.max_boxes; ++t){
-                box truth = float_to_box(state.truth + t*5 + b*l.truths);
+                box truth = float_to_box(state.truth + t*7 + b*l.truths);
                 if(!truth.x) break;
-                int class_id = state.truth[t*5 + b*l.truths + 4];
+                int class_id = state.truth[t*7 + b*l.truths + 6];
                 float maxp = 0;
                 int maxi = 0;
                 if(truth.x > 100000 && truth.y > 100000){
                     for(n = 0; n < l.n*l.w*l.h; ++n){
-                        int index = size*n + b*l.outputs + 5;
+                        int index = size*n + b*l.outputs + 7;
                         float scale =  l.output[index-1];
                         float p = scale*get_hierarchy_probability(l.output + index, l.softmax_tree, class_id);
                         if(p > maxp){
@@ -238,7 +245,7 @@ void forward_region_layer(const region_layer l, network_state state)
                             maxi = n;
                         }
                     }
-                    int index = size*maxi + b*l.outputs + 5;
+                    int index = size*maxi + b*l.outputs + 7;
                     delta_region_class(l.output, l.delta, index, class_id, l.classes, l.softmax_tree, l.class_scale, &avg_cat, l.focal_loss);
                     ++class_count;
                     onlyclass_id = 1;
@@ -255,24 +262,24 @@ void forward_region_layer(const region_layer l, network_state state)
                     float best_iou = 0;
                     int best_class_id = -1;
                     for(t = 0; t < l.max_boxes; ++t){
-                        box truth = float_to_box(state.truth + t*5 + b*l.truths);
-						int class_id = state.truth[t * 5 + b*l.truths + 4];
+                        box truth = float_to_box(state.truth + t*7 + b*l.truths);
+						int class_id = state.truth[t * 7 + b*l.truths + 6];
 						if (class_id >= l.classes) continue; // if label contains class_id more than number of classes in the cfg-file
                         if(!truth.x) break;
                         float iou = box_iou(pred, truth);
                         if (iou > best_iou) {
-                            best_class_id = state.truth[t*5 + b*l.truths + 4];
+                            best_class_id = state.truth[t*7 + b*l.truths + 6];
                             best_iou = iou;
                         }
                     }
-                    avg_anyobj += l.output[index + 4];
-                    l.delta[index + 4] = l.noobject_scale * ((0 - l.output[index + 4]) * logistic_gradient(l.output[index + 4]));
-                    if(l.classfix == -1) l.delta[index + 4] = l.noobject_scale * ((best_iou - l.output[index + 4]) * logistic_gradient(l.output[index + 4]));
+                    avg_anyobj += l.output[index + 6];
+                    l.delta[index + 6] = l.noobject_scale * ((0 - l.output[index + 6]) * logistic_gradient(l.output[index + 6]));
+                    if(l.classfix == -1) l.delta[index + 6] = l.noobject_scale * ((best_iou - l.output[index + 6]) * logistic_gradient(l.output[index + 6]));
                     else{
                         if (best_iou > l.thresh) {
-                            l.delta[index + 4] = 0;
+                            l.delta[index + 6] = 0;
                             if(l.classfix > 0){
-                                delta_region_class(l.output, l.delta, index + 5, best_class_id, l.classes, l.softmax_tree, l.class_scale*(l.classfix == 2 ? l.output[index + 4] : 1), &avg_cat, l.focal_loss);
+                                delta_region_class(l.output, l.delta, index + 7, best_class_id, l.classes, l.softmax_tree, l.class_scale*(l.classfix == 2 ? l.output[index + 6] : 1), &avg_cat, l.focal_loss);
                                 ++class_count;
                             }
                         }
@@ -288,14 +295,17 @@ void forward_region_layer(const region_layer l, network_state state)
                             truth.w = l.biases[2*n]/l.w;
                             truth.h = l.biases[2*n+1]/l.h;
                         }
+                        truth.a1 = truth_val.a1;
+                        truth.a2 = truth_val.a2;
+
                         delta_region_box(truth, l.output, l.biases, n, index, i, j, l.w, l.h, l.delta, .01);
                     }
                 }
             }
         }
         for(t = 0; t < l.max_boxes; ++t){
-            box truth = float_to_box(state.truth + t*5 + b*l.truths);
-			int class_id = state.truth[t * 5 + b*l.truths + 4];
+            box truth = float_to_box(state.truth + t*7 + b*l.truths);
+			int class_id = state.truth[t * 7 + b*l.truths + 6];
 			if (class_id >= l.classes) {
 				printf(" Warning: in txt-labels class_id=%d >= classes=%d in cfg-file. In txt-labels class_id should be [from 0 to %d] \n", class_id, l.classes, l.classes-1);
 				getchar();
@@ -341,14 +351,14 @@ void forward_region_layer(const region_layer l, network_state state)
             avg_iou += iou;
 
             //l.delta[best_index + 4] = iou - l.output[best_index + 4];
-            avg_obj += l.output[best_index + 4];
-            l.delta[best_index + 4] = l.object_scale * (1 - l.output[best_index + 4]) * logistic_gradient(l.output[best_index + 4]);
+            avg_obj += l.output[best_index + 6];
+            l.delta[best_index + 6] = l.object_scale * (1 - l.output[best_index + 6]) * logistic_gradient(l.output[best_index + 6]);
             if (l.rescore) {
-                l.delta[best_index + 4] = l.object_scale * (iou - l.output[best_index + 4]) * logistic_gradient(l.output[best_index + 4]);
+                l.delta[best_index + 6] = l.object_scale * (iou - l.output[best_index + 6]) * logistic_gradient(l.output[best_index + 6]);
             }
 
             if (l.map) class_id = l.map[class_id];
-            delta_region_class(l.output, l.delta, best_index + 5, class_id, l.classes, l.softmax_tree, l.class_scale, &avg_cat, l.focal_loss);
+            delta_region_class(l.output, l.delta, best_index + 7, class_id, l.classes, l.softmax_tree, l.class_scale, &avg_cat, l.focal_loss);
             ++count;
             ++class_count;
         }
@@ -375,17 +385,17 @@ void get_region_boxes(layer l, int w, int h, float thresh, float **probs, box *b
         int col = i % l.w;
         for(n = 0; n < l.n; ++n){
             int index = i*l.n + n;
-            int p_index = index * (l.classes + 5) + 4;
+            int p_index = index * (l.classes + 7) + 6;
             float scale = predictions[p_index];
             if(l.classfix == -1 && scale < .5) scale = 0;
-            int box_index = index * (l.classes + 5);
+            int box_index = index * (l.classes + 7);
             boxes[index] = get_region_box(predictions, l.biases, n, box_index, col, row, l.w, l.h);
             boxes[index].x *= w;
             boxes[index].y *= h;
             boxes[index].w *= w;
             boxes[index].h *= h;
 
-            int class_index = index * (l.classes + 5) + 5;
+            int class_index = index * (l.classes + 7) + 7;
             if(l.softmax_tree){
 
                 hierarchy_predictions(predictions + class_index, l.classes, l.softmax_tree, 0);
@@ -432,14 +442,14 @@ void forward_region_layer_gpu(const region_layer l, network_state state)
     flatten_ongpu(state.input, l.h*l.w, l.n*(l.coords + l.classes + 1), l.batch, 1, l.output_gpu);
     if(l.softmax_tree){
         int i;
-        int count = 5;
+        int count = 7;
         for (i = 0; i < l.softmax_tree->groups; ++i) {
             int group_size = l.softmax_tree->group_size[i];
-            softmax_gpu(l.output_gpu+count, group_size, l.classes + 5, l.w*l.h*l.n*l.batch, 1, l.output_gpu + count);
+            softmax_gpu(l.output_gpu+count, group_size, l.classes + 7, l.w*l.h*l.n*l.batch, 1, l.output_gpu + count);
             count += group_size;
         }
     }else if (l.softmax){
-        softmax_gpu(l.output_gpu+5, l.classes, l.classes + 5, l.w*l.h*l.n*l.batch, 1, l.output_gpu + 5);
+        softmax_gpu(l.output_gpu+7, l.classes, l.classes + 7, l.w*l.h*l.n*l.batch, 1, l.output_gpu + 7);
     }
 
     float *in_cpu = calloc(l.batch*l.inputs, sizeof(float));
@@ -538,12 +548,12 @@ void get_region_detections(layer l, int w, int h, int netw, int neth, float thre
 			}
 			int obj_index = entry_index(l, 0, n*l.w*l.h + i, l.coords);
 			int box_index = entry_index(l, 0, n*l.w*l.h + i, 0);
-			int mask_index = entry_index(l, 0, n*l.w*l.h + i, 4);
+			int mask_index = entry_index(l, 0, n*l.w*l.h + i, 6);
 			float scale = l.background ? 1 : predictions[obj_index];
 			dets[index].bbox = get_region_box(predictions, l.biases, n, box_index, col, row, l.w, l.h);// , l.w*l.h);
 			dets[index].objectness = scale > thresh ? scale : 0;
 			if (dets[index].mask) {
-				for (j = 0; j < l.coords - 4; ++j) {
+				for (j = 0; j < l.coords - 6; ++j) {
 					dets[index].mask[j] = l.output[mask_index + j*l.w*l.h];
 				}
 			}

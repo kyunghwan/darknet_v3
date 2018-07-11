@@ -10,6 +10,8 @@ box float_to_box(float *f)
     b.y = f[1];
     b.w = f[2];
     b.h = f[3];
+    b.a1 = f[4];
+    b.a2 = f[5];
     return b;
 }
 

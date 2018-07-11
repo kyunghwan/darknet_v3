@@ -279,7 +279,7 @@ void draw_detections_v3(image im, detection *dets, int num, float thresh, char *
 {
 	int selected_detections_num;
 	detection_with_class* selected_detections = get_actual_detections(dets, num, thresh, &selected_detections_num);
-
+    int class_id;
 	// text output
 	qsort(selected_detections, selected_detections_num, sizeof(*selected_detections), compare_by_lefts);
 	int i;
@@ -345,6 +345,17 @@ void draw_detections_v3(image im, detection *dets, int num, float thresh, char *
 			//int b_width = right - left;
 			//int b_height = bot - top;
 			//sprintf(labelstr, "%d x %d - w: %d, h: %d", b_x_center, b_y_center, b_width, b_height);
+
+            FILE* fp = NULL;
+            fp = fopen("result.txt","a");
+            if(fp==NULL)
+            {
+               printf("FILE OPEN ERROR");
+               exit(0);
+            }
+            
+            fprintf(fp,"%d %f %f %f %f %f %f\n",selected_detections[i].best_class, b.x, b.y, b.w, b.h, b.a1, b.a2);
+            fclose(fp);
 
 			draw_box_width(im, left, top, right, bot, width, red, green, blue);
 			if (alphabet) {
@@ -532,7 +543,7 @@ void draw_detections_cv_v3(IplImage* show_img, detection *dets, int num, float t
 			//cvSetImageROI(copy_img, rect);
 			//cvSaveImage(image_name, copy_img, 0);
 			//cvResetImageROI(copy_img);
-
+            
 			cvRectangle(show_img, pt1, pt2, color, width, 8, 0);
 			if (ext_output)
 				printf("\t(left_x: %4.0f   top_y: %4.0f   width: %4.0f   height: %4.0f)\n", 

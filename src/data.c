@@ -119,6 +119,7 @@ matrix load_image_augment_paths(char **paths, int n, int use_flip, int min, int 
         image im = load_image_color(paths[i], 0, 0);
         image crop = random_augment_image(im, angle, aspect, min, max, size);
         int flip = use_flip ? random_gen() % 2 : 0;
+        flip = 0;
         if (flip)
             flip_image(crop);
         random_distort_image(crop, hue, saturation, exposure);
@@ -144,16 +145,18 @@ box_label *read_boxes(char *filename, int *n)
 		printf("Can't open label file. \n");
 		file_error(filename);
 	}
-    float x, y, h, w;
+    float x, y, h, w, a1, a2;
     int id;
     int count = 0;
-    while(fscanf(file, "%d %f %f %f %f", &id, &x, &y, &w, &h) == 5){
+    while(fscanf(file, "%d %f %f %f %f %f %f", &id, &x, &y, &w, &h, &a1, &a2) == 7){
         boxes = realloc(boxes, (count+1)*sizeof(box_label));
         boxes[count].id = id;
         boxes[count].x = x;
         boxes[count].y = y;
         boxes[count].h = h;
         boxes[count].w = w;
+        boxes[count].a1 = a1;
+        boxes[count].a2 = a2;
         boxes[count].left   = x - w/2;
         boxes[count].right  = x + w/2;
         boxes[count].top    = y - h/2;
@@ -310,7 +313,7 @@ void fill_truth_detection(char *path, int num_boxes, float *truth, int classes, 
 	randomize_boxes(boxes, count);
 	correct_boxes(boxes, count, dx, dy, sx, sy, flip);
 	if (count > num_boxes) count = num_boxes;
-	float x, y, w, h;
+	float x, y, w, h, a1, a2;
 	int id;
 
 	for (i = 0; i < count; ++i) {
@@ -318,6 +321,8 @@ void fill_truth_detection(char *path, int num_boxes, float *truth, int classes, 
 		y = boxes[i].y;
 		w = boxes[i].w;
 		h = boxes[i].h;
+    	a1 = boxes[i].a1;
+		a2 = boxes[i].a2;
 		id = boxes[i].id;
 
 		// not detect small objects
@@ -363,11 +368,13 @@ void fill_truth_detection(char *path, int num_boxes, float *truth, int classes, 
 		if (x == 0) x += lowest_w;
 		if (y == 0) y += lowest_h;
 
-        truth[i*5+0] = x;
-        truth[i*5+1] = y;
-        truth[i*5+2] = w;
-        truth[i*5+3] = h;
-        truth[i*5+4] = id;
+        truth[i*7+0] = x;
+        truth[i*7+1] = y;
+        truth[i*7+2] = w;
+        truth[i*7+3] = h;
+        truth[i*7+4] = a1;
+        truth[i*7+5] = a2;
+        truth[i*7+6] = id;
     }
     free(boxes);
 }
@@ -732,7 +739,7 @@ data load_data_detection(int n, char **paths, int m, int w, int h, int c, int bo
     d.X.vals = calloc(d.X.rows, sizeof(float*));
     d.X.cols = h*w*c;
 
-    d.y = make_matrix(n, 5*boxes);
+    d.y = make_matrix(n, 7*boxes);
     for(i = 0; i < n; ++i){
 		const char *filename = random_paths[i];
 

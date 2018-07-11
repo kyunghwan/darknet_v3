@@ -1177,7 +1177,7 @@ void test_detector(char *datacfg, char *cfgfile, char *weightfile, char *filenam
         //free_ptrs((void **)probs, l.w*l.h*l.n);
 #ifdef OPENCV
 		if (!dont_show) {
-			cvWaitKey(0);
+			//cvWaitKey(0);
 			cvDestroyAllWindows();
 		}
 #endif
