@@ -807,7 +807,7 @@ data load_data_detection(int n, char **paths, int m, int w, int h, int c, int bo
 	d.X.vals = calloc(d.X.rows, sizeof(float*));
 	d.X.cols = h*w*c;
 
-	d.y = make_matrix(n, 5 * boxes);
+	d.y = make_matrix(n, 7 * boxes);
 	for (i = 0; i < n; ++i) {
 		image orig = load_image(random_paths[i], 0, 0, c);
 
