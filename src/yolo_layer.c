@@ -110,8 +110,8 @@ float delta_yolo_box(box truth, float *x, float *biases, int n, int index, int i
     delta[index + 1*stride] = scale * (ty - x[index + 1*stride]);
     delta[index + 2*stride] = scale * (tw - x[index + 2*stride]);
     delta[index + 3*stride] = scale * (th - x[index + 3*stride]);
-    delta[index + 4*stride] = 10 * scale * (ta1 - x[index + 4*stride]);
-    delta[index + 5*stride] = 10 * scale * (ta2 - x[index + 5*stride]);
+    delta[index + 4*stride] = 1.5 * scale * (ta1 - x[index + 4*stride]);
+    delta[index + 5*stride] = 1.5 * scale * (ta2 - x[index + 5*stride]);
     return iou;
 }
 

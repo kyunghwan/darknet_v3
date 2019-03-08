@@ -111,8 +111,8 @@ float delta_region_box(box truth, float *x, float *biases, int n, int index, int
     delta[index + 1] = scale * (ty - logistic_activate(x[index + 1])) * logistic_gradient(logistic_activate(x[index + 1]));
     delta[index + 2] = scale * (tw - x[index + 2]);
     delta[index + 3] = scale * (th - x[index + 3]);
-    delta[index + 4] = 10 * scale * (ta1 - x[index + 4]);
-    delta[index + 5] = 10 * scale * (ta2 - x[index + 5]);
+    delta[index + 4] = 1.5 * scale * (ta1 - x[index + 4]);
+    delta[index + 5] = 1.5 * scale * (ta2 - x[index + 5]);
     return iou;
 }
 

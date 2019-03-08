@@ -280,6 +280,8 @@ YOLODLL_API std::vector<bbox_t> Detector::detect(image_t img, float thresh, bool
 			bbox.y = std::max((double)0, (b.y - b.h / 2.)*im.h);
 			bbox.w = b.w*im.w;
 			bbox.h = b.h*im.h;
+			bbox.a1 = b.a1;
+			bbox.a2 = b.a2;
 			bbox.obj_id = obj_id;
 			bbox.prob = prob;
 			bbox.track_id = 0;
