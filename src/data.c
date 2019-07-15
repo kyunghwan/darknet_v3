@@ -145,10 +145,10 @@ box_label *read_boxes(char *filename, int *n)
 		printf("Can't open label file. \n");
 		file_error(filename);
 	}
-    float x, y, h, w, a1, a2;
+    float x, y, h, w, a1, a2, a3;
     int id;
     int count = 0;
-    while(fscanf(file, "%d %f %f %f %f %f %f", &id, &x, &y, &w, &h, &a1, &a2) == 7){
+    while(fscanf(file, "%d %f %f %f %f %f %f", &id, &x, &y, &w, &h, &a1, &a2, &a3) == 8){
         boxes = realloc(boxes, (count+1)*sizeof(box_label));
         boxes[count].id = id;
         boxes[count].x = x;
@@ -157,6 +157,7 @@ box_label *read_boxes(char *filename, int *n)
         boxes[count].w = w;
         boxes[count].a1 = a1;
         boxes[count].a2 = a2;
+        boxes[count].a3 = a3;
         boxes[count].left   = x - w/2;
         boxes[count].right  = x + w/2;
         boxes[count].top    = y - h/2;
@@ -323,6 +324,7 @@ void fill_truth_detection(char *path, int num_boxes, float *truth, int classes, 
 		h = boxes[i].h;
     	a1 = boxes[i].a1;
 		a2 = boxes[i].a2;
+        a3 = boxes[i].a3;
 		id = boxes[i].id;
 
 		// not detect small objects
@@ -368,13 +370,14 @@ void fill_truth_detection(char *path, int num_boxes, float *truth, int classes, 
 		if (x == 0) x += lowest_w;
 		if (y == 0) y += lowest_h;
 
-        truth[i*7+0] = x;
-        truth[i*7+1] = y;
-        truth[i*7+2] = w;
-        truth[i*7+3] = h;
-        truth[i*7+4] = a1;
-        truth[i*7+5] = a2;
-        truth[i*7+6] = id;
+        truth[i*8+0] = x;
+        truth[i*8+1] = y;
+        truth[i*8+2] = w;
+        truth[i*8+3] = h;
+        truth[i*8+4] = a1;
+        truth[i*8+5] = a2;
+        truth[i*8+6] = a2;
+        truth[i*8+7] = id;
     }
     free(boxes);
 }
@@ -739,7 +742,7 @@ data load_data_detection(int n, char **paths, int m, int w, int h, int c, int bo
     d.X.vals = calloc(d.X.rows, sizeof(float*));
     d.X.cols = h*w*c;
 
-    d.y = make_matrix(n, 7*boxes);
+    d.y = make_matrix(n, 8*boxes);
     for(i = 0; i < n; ++i){
 		const char *filename = random_paths[i];
 
@@ -807,7 +810,7 @@ data load_data_detection(int n, char **paths, int m, int w, int h, int c, int bo
 	d.X.vals = calloc(d.X.rows, sizeof(float*));
 	d.X.cols = h*w*c;
 
-	d.y = make_matrix(n, 7 * boxes);
+	d.y = make_matrix(n, 8 * boxes);
 	for (i = 0; i < n; ++i) {
 		image orig = load_image(random_paths[i], 0, 0, c);
 

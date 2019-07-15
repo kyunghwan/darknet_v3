@@ -354,7 +354,7 @@ void draw_detections_v3(image im, detection *dets, int num, float thresh, char *
                exit(0);
             }
             
-            fprintf(fp,"%d %f %f %f %f %f %f\n",selected_detections[i].best_class, b.x, b.y, b.w, b.h, b.a1, b.a2);
+            fprintf(fp,"%d %f %f %f %f %f %f %f\n",selected_detections[i].best_class, b.x, b.y, b.w, b.h, b.a1, b.a2, b.a3);
             fclose(fp);
 
 			draw_box_width(im, left, top, right, bot, width, red, green, blue);

@@ -12,6 +12,7 @@ box float_to_box(float *f)
     b.h = f[3];
     b.a1 = f[4];
     b.a2 = f[5];
+    b.a3 = f[6];
     return b;
 }
 

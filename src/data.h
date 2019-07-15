@@ -71,7 +71,7 @@ typedef struct load_args{
 
 typedef struct{
     int id;
-    float x,y,w,h,a1,a2;
+    float x,y,w,h,a1,a2,a3;
     float left, right, top, bottom;
 } box_label;
 
