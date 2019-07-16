@@ -314,7 +314,7 @@ void fill_truth_detection(char *path, int num_boxes, float *truth, int classes, 
 	randomize_boxes(boxes, count);
 	correct_boxes(boxes, count, dx, dy, sx, sy, flip);
 	if (count > num_boxes) count = num_boxes;
-	float x, y, w, h, a1, a2;
+	float x, y, w, h, a1, a2, a3;
 	int id;
 
 	for (i = 0; i < count; ++i) {
