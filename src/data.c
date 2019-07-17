@@ -376,7 +376,7 @@ void fill_truth_detection(char *path, int num_boxes, float *truth, int classes, 
         truth[i*8+3] = h;
         truth[i*8+4] = a1;
         truth[i*8+5] = a2;
-        truth[i*8+6] = a2;
+        truth[i*8+6] = a3;
         truth[i*8+7] = id;
     }
     free(boxes);

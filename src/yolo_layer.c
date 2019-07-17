@@ -280,7 +280,7 @@ void forward_yolo_layer(const layer l, network_state state)
                 avg_obj += l.output[obj_index];
                 l.delta[obj_index] = 1 - l.output[obj_index];
 
-                int class_id = state.truth[t*(6 + 1) + b*l.truths + 7];
+                int class_id = state.truth[t*(7 + 1) + b*l.truths + 7];
                 if (l.map) class_id = l.map[class_id];
                 int class_index = entry_index(l, b, mask_n*l.w*l.h + j*l.w + i, 7 + 1);
                 delta_yolo_class(l.output, l.delta, class_index, class_id, l.classes, l.w*l.h, &avg_cat, l.focal_loss);
