@@ -148,7 +148,7 @@ box_label *read_boxes(char *filename, int *n)
     float x, y, h, w, a1, a2, a3;
     int id;
     int count = 0;
-    while(fscanf(file, "%d %f %f %f %f %f %f", &id, &x, &y, &w, &h, &a1, &a2, &a3) == 8){
+    while(fscanf(file, "%d %f %f %f %f %f %f %f", &id, &x, &y, &w, &h, &a1, &a2, &a3) == 8){
         boxes = realloc(boxes, (count+1)*sizeof(box_label));
         boxes[count].id = id;
         boxes[count].x = x;
